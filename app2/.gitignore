@@ -1,0 +1,11 @@
+# PyCharm related files
+.idea/
+
+# Build files
+*.pyc
+
+# Django testing DB (SQLite)
+test_db
+
+# Syncthing related files
+**.synctracker

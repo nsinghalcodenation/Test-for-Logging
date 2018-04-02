@@ -1,0 +1,65 @@
+properties([
+     pipelineTriggers([
+         pollSCM('*/2 * * * *')
+     ]),
+     // Define the parameters which would be used in stages.
+     parameters([
+         booleanParam(
+             defaultValue: false,
+             description: 'Publish the image?',
+             name: 'PUBLISH'
+         ),
+         string(
+             defaultValue: 'dev',
+             description: 'Image Tag to Publish? - dev, staging, prod or any custom tag',
+             name: 'REGISTRY_IMAGE_TAG'
+         )
+     ])
+ ])
+
+ podTemplate(
+     label: 'docker',
+     containers: [containerTemplate(name: 'docker', image: 'docker:latest', ttyEnabled: true, command: 'cat')],
+     volumes: [hostPathVolume(hostPath: '/var/run/docker.sock', mountPath: '/var/run/docker.sock')]
+ ) {
+     node('docker') {
+         container('docker') {
+
+             checkout scm
+             // Change the values of following environment variables according to your configuration.
+             withEnv(['BUILD_CONTEXT_PATH=.',
+                      'DOCKERFILE_PATH=Dockerfile.prod',
+                      'REGISTRY_IMAGE_URL=registry2.swarm.devfactory.com/codenation/cn-devtools/django-template']) {
+
+                 stage('Build') {
+                     sh "docker build -t ${env.BUILD_ID}:latest -f ${env.DOCKERFILE_PATH} ${env.BUILD_CONTEXT_PATH}"
+                 }
+
+                 try {
+                     stage('Test') {
+                         sh "docker run ${env.BUILD_ID}:latest ./test.sh"
+                     }
+
+                     if (params.PUBLISH) {
+
+                         stage('Publish') {
+                                 sh "docker tag ${env.BUILD_ID}:latest ${env.REGISTRY_IMAGE_URL}:${params.REGISTRY_IMAGE_TAG}"
+                                 sh "docker push ${env.REGISTRY_IMAGE_URL}:${params.REGISTRY_IMAGE_TAG}"
+                         }
+
+                     }
+
+                 } catch (error) {
+
+                     throw error
+
+                 } finally {
+                     stage('Cleanup') {
+                         sh "docker rmi -f ${env.BUILD_ID}:latest"
+                     }
+                 }
+
+             }
+         }
+     }
+ }

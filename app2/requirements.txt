@@ -1,0 +1,10 @@
+Django
+S3ConfigLoader
+PyMySQL
+mysqlclient
+django-extensions
+django-auth-ldap
+djangorestframework
+django-rest-swagger
+mod-wsgi
+mock==2.0.0

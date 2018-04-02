@@ -1,0 +1,11 @@
+.synctracker
+(?d).stignore
+(?d).stfolder
+.wsconfig
+.git/
+.idea/
+.eclipse/
+docker/
+venv
+__pycache__
+

@@ -1,0 +1,40 @@
+FROM python:3.6.4-slim
+
+# Apache exposes server at port 80 (default)
+# Python Django in-built server is exposed at port 8000 (default)
+EXPOSE 80
+EXPOSE 8000
+
+# Devspace related configuration
+RUN mkdir -p /data/app2
+WORKDIR /data
+
+# Django related configuration
+ENV APP_RUN_ENV PROD
+
+# Install os dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libmysqlclient-dev \
+        apache2 apache2-dev python3-dev \
+        build-essential gcc \
+        libsasl2-dev libldap2-dev \
+        net-tools vim \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --upgrade awscli
+
+# Link stdout and stderr with apache log files
+RUN ln -sf /dev/stdout /var/log/apache2/access.log
+RUN ln -sf /dev/stderr /var/log/apache2/error.log
+
+# Install python dependencies
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
+
+# Copy apache-conf file to default conf location
+ENV WSGI_CONF /etc/apache2/sites-available/000-default.conf
+COPY deploy/apache-conf.conf ${WSGI_CONF}
+
+COPY . /data/app2
+
+CMD ./deploy/start-prod.sh
